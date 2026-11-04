@@ -45,9 +45,9 @@ class DashboardViewTest(ViewTestBase):
         Visitante.objects.create(nome="V", documento="TESTE-1", morador=self.ana)
         resp = self.client.get(reverse("dashboard"))
         self.assertEqual(resp.context["visitantes_presentes"], 1)
-        self.assertEqual(resp.context["moradores_ativos"], 2)
         self.assertContains(resp, 'href="/moradores/"')
         self.assertContains(resp, 'href="/visitantes/"')
+        self.assertContains(resp, 'href="/encomendas/"')
 
 
 class MoradorViewsTest(ViewTestBase):

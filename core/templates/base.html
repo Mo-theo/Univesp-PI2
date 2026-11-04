@@ -45,6 +45,11 @@
                {% if url_name|slice:':10' == 'visitante_' %}aria-current="page"{% endif %}
                href="{% url 'visitante_list' %}">Visitantes</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link{% if url_name|slice:':10' == 'encomenda_' %} active{% endif %}"
+               {% if url_name|slice:':10' == 'encomenda_' %}aria-current="page"{% endif %}
+               href="{% url 'encomenda_list' %}">Encomendas</a>
+          </li>
         </ul>
         <div class="d-flex align-items-center gap-3 py-2 py-md-0">
           <span class="text-white small">Olá, {{ user.get_short_name|default:user.get_username }}</span>

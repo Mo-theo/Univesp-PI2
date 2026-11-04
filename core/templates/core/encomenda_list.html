@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Encomendas{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 m-0">Encomendas</h1>
+  <a href="{% url 'encomenda_create' %}" class="btn btn-primary">Registrar chegada</a>
+</div>
+
+{% include "core/partials/busca.html" with rotulo="Buscar por descrição, rastreio, morador ou apartamento" %}
+
+<section aria-labelledby="titulo-pendentes" class="mb-5">
+  <h2 id="titulo-pendentes" class="h5">Pendentes <span class="badge text-bg-warning">{{ pendentes|length }}</span></h2>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle bg-white">
+      <caption class="visually-hidden">Encomendas aguardando retirada</caption>
+      <thead>
+        <tr>
+          <th scope="col">Descrição</th>
+          <th scope="col">Destinatário</th>
+          <th scope="col">Transportadora</th>
+          <th scope="col">Rastreio</th>
+          <th scope="col">Recebida em</th>
+          <th scope="col"><span class="visually-hidden">Ações</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in pendentes %}
+        <tr>
+          <td>{{ e.descricao }}</td>
+          <td>{{ e.morador.nome }} <span class="text-secondary">(Bl. {{ e.morador.bloco }} / Ap. {{ e.morador.apartamento }})</span></td>
+          <td>{{ e.transportadora|default:"—" }}</td>
+          <td>{{ e.codigo_rastreio|default:"—" }}</td>
+          <td>{{ e.data_recebimento|date:"d/m/Y H:i" }}</td>
+          <td class="text-end">
+            <a href="{% url 'encomenda_baixa' e.pk %}" class="btn btn-sm btn-success"
+               aria-label="Dar baixa em {{ e.descricao }} de {{ e.morador.nome }}">Dar baixa</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-secondary py-4">Nenhuma encomenda pendente{% if q %} para esta busca{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="titulo-historico">
+  <h2 id="titulo-historico" class="h5">Histórico de retiradas</h2>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle bg-white">
+      <caption class="visually-hidden">Encomendas já retiradas</caption>
+      <thead>
+        <tr>
+          <th scope="col">Descrição</th>
+          <th scope="col">Destinatário</th>
+          <th scope="col">Recebida em</th>
+          <th scope="col">Retirada em</th>
+          <th scope="col">Retirada por</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in encomenda_list %}
+        <tr>
+          <td>{{ e.descricao }}</td>
+          <td>{{ e.morador.nome }} <span class="text-secondary">(Bl. {{ e.morador.bloco }} / Ap. {{ e.morador.apartamento }})</span></td>
+          <td>{{ e.data_recebimento|date:"d/m/Y H:i" }}</td>
+          <td>{{ e.data_retirada|date:"d/m/Y H:i" }}</td>
+          <td>{{ e.nome_retirou }} <span class="text-secondary">({{ e.documento_retirou }})</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-secondary py-4">Nenhuma retirada registrada{% if q %} para esta busca{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "core/partials/paginacao.html" %}
+</section>
+{% endblock %}

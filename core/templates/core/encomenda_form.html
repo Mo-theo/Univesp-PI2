@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar chegada de encomenda{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h1 class="h3 mb-3">Registrar chegada de encomenda</h1>
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% include "core/partials/form_fields.html" %}
+          <p class="form-text">A data e hora de recebimento são registradas automaticamente. A encomenda fica como <strong>Pendente</strong> até a baixa.</p>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Registrar chegada</button>
+            <a href="{% url 'encomenda_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

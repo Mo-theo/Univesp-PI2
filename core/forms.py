@@ -2,8 +2,9 @@ import re
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.utils import timezone
 
-from .models import Morador, Visitante
+from .models import Encomenda, Morador, Visitante
 
 
 class LoginForm(AuthenticationForm):
@@ -86,3 +87,50 @@ class VisitanteForm(BootstrapFormMixin, forms.ModelForm):
         # Só moradores ativos recebem visitas.
         self.fields["morador"].queryset = Morador.objects.filter(status=Morador.Status.ATIVO)
         self.fields["morador"].empty_label = "Selecione o morador / apartamento"
+
+
+class EncomendaForm(BootstrapFormMixin, forms.ModelForm):
+    """Registro de chegada de encomenda."""
+
+    class Meta:
+        model = Encomenda
+        fields = ["morador", "descricao", "transportadora", "codigo_rastreio"]
+        widgets = {
+            "descricao": forms.TextInput(attrs={"placeholder": "Ex.: caixa pequena, envelope"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["morador"].queryset = Morador.objects.filter(status=Morador.Status.ATIVO)
+        self.fields["morador"].empty_label = "Selecione o morador / apartamento"
+
+
+class BaixaEncomendaForm(BootstrapFormMixin, forms.ModelForm):
+    """Baixa (retirada): exige nome e documento de quem retirou."""
+
+    class Meta:
+        model = Encomenda
+        fields = ["nome_retirou", "documento_retirou"]
+        labels = {
+            "nome_retirou": "Nome de quem retirou",
+            "documento_retirou": "RG ou CPF de quem retirou",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = True
+        self.fields["nome_retirou"].error_messages["required"] = "Informe quem retirou a encomenda."
+        self.fields["documento_retirou"].error_messages["required"] = (
+            "Informe o documento de quem retirou."
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.instance.status == Encomenda.Status.RETIRADA:
+            raise forms.ValidationError("Esta encomenda já foi retirada.")
+        if not self.errors:
+            # Define status e data antes da validação do model (Encomenda.clean).
+            self.instance.status = Encomenda.Status.RETIRADA
+            self.instance.data_retirada = timezone.now()
+        return cleaned

@@ -15,8 +15,14 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import LoginForm, MoradorForm, VisitanteForm
-from .models import Morador, Visitante
+from .forms import (
+    BaixaEncomendaForm,
+    EncomendaForm,
+    LoginForm,
+    MoradorForm,
+    VisitanteForm,
+)
+from .models import Encomenda, Morador, Visitante
 
 # Todas as views (exceto login) são protegidas pelo LoginRequiredMiddleware.
 
@@ -30,10 +36,20 @@ class LoginView(auth_views.LoginView):
 class DashboardView(TemplateView):
     template_name = "core/dashboard.html"
 
+    ULTIMOS = 5
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["visitantes_presentes"] = Visitante.objects.filter(data_saida__isnull=True).count()
-        ctx["moradores_ativos"] = Morador.objects.filter(status=Morador.Status.ATIVO).count()
+        hoje = timezone.localdate()  # dia no fuso America/Sao_Paulo
+        visitantes = Visitante.objects.select_related("morador")
+        encomendas = Encomenda.objects.select_related("morador")
+        ctx.update(
+            visitantes_presentes=visitantes.filter(data_saida__isnull=True).count(),
+            visitantes_hoje=visitantes.filter(data_entrada__date=hoje).count(),
+            encomendas_pendentes=encomendas.filter(status=Encomenda.Status.PENDENTE).count(),
+            ultimos_visitantes=visitantes.order_by("-data_entrada")[: self.ULTIMOS],
+            ultimas_encomendas=encomendas.order_by("-data_recebimento")[: self.ULTIMOS],
+        )
         return ctx
 
 
@@ -160,3 +176,72 @@ class VisitanteSaidaView(View):
         ):
             destino = reverse("visitante_list")
         return redirect(destino)
+
+
+# ---------- Encomendas ----------
+
+
+class EncomendaListView(BuscaMixin, ListView):
+    """Histórico paginado (retiradas) + lista de pendentes."""
+
+    model = Encomenda
+    paginate_by = 20
+    search_fields = (
+        "descricao",
+        "transportadora",
+        "codigo_rastreio",
+        "nome_retirou",
+        "morador__nome",
+        "morador__apartamento",
+        "morador__bloco",
+    )
+
+    def get_queryset(self):
+        qs = Encomenda.objects.select_related("morador").filter(status=Encomenda.Status.RETIRADA)
+        return self.filtrar(qs).order_by("-data_retirada")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        pendentes = Encomenda.objects.select_related("morador").filter(
+            status=Encomenda.Status.PENDENTE
+        )
+        ctx["pendentes"] = self.filtrar(pendentes)
+        return ctx
+
+
+class EncomendaCreateView(SuccessMessageMixin, CreateView):
+    model = Encomenda
+    form_class = EncomendaForm
+    success_url = reverse_lazy("encomenda_list")
+    success_message = "Chegada de encomenda (%(descricao)s) registrada."
+
+    def get_initial(self):
+        initial = super().get_initial()
+        morador = self.request.GET.get("morador")
+        if morador and morador.isdigit():
+            initial["morador"] = morador
+        return initial
+
+
+class EncomendaBaixaView(UpdateView):
+    """Baixa da encomenda: registra quem retirou, status e data/hora."""
+
+    model = Encomenda
+    form_class = BaixaEncomendaForm
+    template_name = "core/encomenda_baixa.html"
+    success_url = reverse_lazy("encomenda_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        encomenda = get_object_or_404(Encomenda, pk=kwargs["pk"])
+        if encomenda.status == Encomenda.Status.RETIRADA:
+            messages.warning(request, "Esta encomenda já foi retirada.")
+            return redirect("encomenda_list")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f"Baixa registrada: {self.object.descricao} retirada por {self.object.nome_retirou}.",
+        )
+        return response

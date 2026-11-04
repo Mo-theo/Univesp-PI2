@@ -16,4 +16,8 @@ urlpatterns = [
     path("visitantes/", views.VisitanteListView.as_view(), name="visitante_list"),
     path("visitantes/entrada/", views.VisitanteCreateView.as_view(), name="visitante_create"),
     path("visitantes/<int:pk>/saida/", views.VisitanteSaidaView.as_view(), name="visitante_saida"),
+    # Encomendas
+    path("encomendas/", views.EncomendaListView.as_view(), name="encomenda_list"),
+    path("encomendas/chegada/", views.EncomendaCreateView.as_view(), name="encomenda_create"),
+    path("encomendas/<int:pk>/baixa/", views.EncomendaBaixaView.as_view(), name="encomenda_baixa"),
 ]

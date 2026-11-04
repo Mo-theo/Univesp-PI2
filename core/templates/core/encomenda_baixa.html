@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Dar baixa em encomenda{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h1 class="h3 mb-3">Dar baixa em encomenda</h1>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h6 text-secondary mb-3">Dados da encomenda</h2>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Descrição</dt>
+          <dd class="col-sm-8">{{ object.descricao }}</dd>
+          <dt class="col-sm-4">Destinatário</dt>
+          <dd class="col-sm-8">{{ object.morador }}</dd>
+          <dt class="col-sm-4">Transportadora</dt>
+          <dd class="col-sm-8">{{ object.transportadora|default:"—" }}</dd>
+          <dt class="col-sm-4">Rastreio</dt>
+          <dd class="col-sm-8">{{ object.codigo_rastreio|default:"—" }}</dd>
+          <dt class="col-sm-4">Recebida em</dt>
+          <dd class="col-sm-8 mb-0">{{ object.data_recebimento|date:"d/m/Y H:i" }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% include "core/partials/form_fields.html" %}
+          <p class="form-text">A data e hora da retirada são registradas automaticamente ao confirmar.</p>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Confirmar retirada</button>
+            <a href="{% url 'encomenda_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

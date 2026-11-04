@@ -41,6 +41,8 @@
           {% if morador.status == "ativo" %}
           <a href="{% url 'visitante_create' %}?morador={{ morador.pk }}" class="btn btn-sm btn-outline-primary"
              aria-label="Registrar visita para {{ morador.nome }}">Visita</a>
+          <a href="{% url 'encomenda_create' %}?morador={{ morador.pk }}" class="btn btn-sm btn-outline-primary"
+             aria-label="Registrar encomenda para {{ morador.nome }}">Encomenda</a>
           {% endif %}
           <a href="{% url 'morador_update' morador.pk %}" class="btn btn-sm btn-outline-secondary"
              aria-label="Editar {{ morador.nome }}">Editar</a>
