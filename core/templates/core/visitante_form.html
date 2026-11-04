@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar entrada{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h1 class="h3 mb-3">Registrar entrada de visitante</h1>
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% include "core/partials/form_fields.html" %}
+          <p class="form-text">A data e hora de entrada são registradas automaticamente.</p>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Registrar entrada</button>
+            <a href="{% url 'visitante_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

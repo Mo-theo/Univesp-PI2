@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir morador{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h1 class="h3 mb-3">Excluir morador</h1>
+    <div class="card border-danger">
+      <div class="card-body">
+        <p>Tem certeza que deseja excluir <strong>{{ object }}</strong>? Esta ação não pode ser desfeita.</p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Sim, excluir</button>
+          <a href="{% url 'morador_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

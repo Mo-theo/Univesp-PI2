@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Moradores{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 m-0">Moradores</h1>
+  <a href="{% url 'morador_create' %}" class="btn btn-primary">Novo morador</a>
+</div>
+
+{% include "core/partials/busca.html" with rotulo="Buscar por nome, bloco ou apartamento" %}
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover align-middle bg-white">
+    <caption class="visually-hidden">Lista de moradores</caption>
+    <thead>
+      <tr>
+        <th scope="col">Nome</th>
+        <th scope="col">Bloco</th>
+        <th scope="col">Ap.</th>
+        <th scope="col">Telefone</th>
+        <th scope="col">Status</th>
+        <th scope="col"><span class="visually-hidden">Ações</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for morador in morador_list %}
+      <tr>
+        <td>{{ morador.nome }}</td>
+        <td>{{ morador.bloco }}</td>
+        <td>{{ morador.apartamento }}</td>
+        <td>{{ morador.telefone|default:"—" }}</td>
+        <td>
+          {% if morador.status == "ativo" %}
+            <span class="badge text-bg-success">Ativo</span>
+          {% else %}
+            <span class="badge text-bg-secondary">Inativo</span>
+          {% endif %}
+        </td>
+        <td class="text-end text-nowrap">
+          {% if morador.status == "ativo" %}
+          <a href="{% url 'visitante_create' %}?morador={{ morador.pk }}" class="btn btn-sm btn-outline-primary"
+             aria-label="Registrar visita para {{ morador.nome }}">Visita</a>
+          {% endif %}
+          <a href="{% url 'morador_update' morador.pk %}" class="btn btn-sm btn-outline-secondary"
+             aria-label="Editar {{ morador.nome }}">Editar</a>
+          <a href="{% url 'morador_delete' morador.pk %}" class="btn btn-sm btn-outline-danger"
+             aria-label="Excluir {{ morador.nome }}">Excluir</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-secondary py-4">Nenhum morador encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "core/partials/paginacao.html" %}
+{% endblock %}

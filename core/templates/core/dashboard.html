@@ -3,6 +3,27 @@
 {% block title %}Painel{% endblock %}
 
 {% block content %}
-<h1 class="h3 mb-3">Painel da portaria</h1>
-<p class="text-secondary">Você está conectado. Os atalhos de visitantes e encomendas serão adicionados nas próximas etapas.</p>
+<h1 class="h3 mb-4">Painel da portaria</h1>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h5">Visitantes presentes</h2>
+        <p class="display-6 mb-3">{{ visitantes_presentes }}</p>
+        <a href="{% url 'visitante_create' %}" class="btn btn-primary">Registrar entrada</a>
+        <a href="{% url 'visitante_list' %}" class="btn btn-outline-secondary">Ver visitantes</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h5">Moradores ativos</h2>
+        <p class="display-6 mb-3">{{ moradores_ativos }}</p>
+        <a href="{% url 'morador_create' %}" class="btn btn-primary">Cadastrar morador</a>
+        <a href="{% url 'morador_list' %}" class="btn btn-outline-secondary">Ver moradores</a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

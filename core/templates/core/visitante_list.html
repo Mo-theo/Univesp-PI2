@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Visitantes{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 m-0">Visitantes</h1>
+  <a href="{% url 'visitante_create' %}" class="btn btn-primary">Registrar entrada</a>
+</div>
+
+{% include "core/partials/busca.html" with rotulo="Buscar por visitante, documento, morador ou apartamento" %}
+
+<section aria-labelledby="titulo-presentes" class="mb-5">
+  <h2 id="titulo-presentes" class="h5">Presentes agora <span class="badge text-bg-primary">{{ presentes|length }}</span></h2>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle bg-white">
+      <caption class="visually-hidden">Visitantes no condomínio agora</caption>
+      <thead>
+        <tr>
+          <th scope="col">Visitante</th>
+          <th scope="col">Documento</th>
+          <th scope="col">Visitando</th>
+          <th scope="col">Entrada</th>
+          <th scope="col">Motivo</th>
+          <th scope="col"><span class="visually-hidden">Ações</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in presentes %}
+        <tr>
+          <td>{{ v.nome }}</td>
+          <td>{{ v.documento }}</td>
+          <td>{{ v.morador.nome }} <span class="text-secondary">(Bl. {{ v.morador.bloco }} / Ap. {{ v.morador.apartamento }})</span></td>
+          <td>{{ v.data_entrada|date:"d/m/Y H:i" }}</td>
+          <td>{{ v.motivo|default:"—" }}</td>
+          <td class="text-end">
+            <form method="post" action="{% url 'visitante_saida' v.pk %}" class="m-0">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-success" aria-label="Registrar saída de {{ v.nome }}">Registrar saída</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-secondary py-4">Nenhum visitante presente{% if q %} para esta busca{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="titulo-historico">
+  <h2 id="titulo-historico" class="h5">Histórico</h2>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle bg-white">
+      <caption class="visually-hidden">Visitas encerradas</caption>
+      <thead>
+        <tr>
+          <th scope="col">Visitante</th>
+          <th scope="col">Documento</th>
+          <th scope="col">Visitou</th>
+          <th scope="col">Entrada</th>
+          <th scope="col">Saída</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in visitante_list %}
+        <tr>
+          <td>{{ v.nome }}</td>
+          <td>{{ v.documento }}</td>
+          <td>{{ v.morador.nome }} <span class="text-secondary">(Bl. {{ v.morador.bloco }} / Ap. {{ v.morador.apartamento }})</span></td>
+          <td>{{ v.data_entrada|date:"d/m/Y H:i" }}</td>
+          <td>{{ v.data_saida|date:"d/m/Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-secondary py-4">Nenhuma visita encerrada{% if q %} para esta busca{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "core/partials/paginacao.html" %}
+</section>
+{% endblock %}

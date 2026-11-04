@@ -1,0 +1,10 @@
+<form method="get" class="row g-2 mb-3" role="search">
+  <div class="col-sm-8 col-md-6">
+    <label for="busca" class="visually-hidden">{{ rotulo }}</label>
+    <input type="search" id="busca" name="q" value="{{ q }}" class="form-control" placeholder="{{ rotulo }}">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">Buscar</button>
+    {% if q %}<a href="{{ request.path }}" class="btn btn-outline-secondary">Limpar</a>{% endif %}
+  </div>
+</form>

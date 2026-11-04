@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Editar morador{% else %}Novo morador{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h1 class="h3 mb-3">{% if object %}Editar morador{% else %}Novo morador{% endif %}</h1>
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% include "core/partials/form_fields.html" %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="{% url 'morador_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
