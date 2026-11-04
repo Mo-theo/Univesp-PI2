@@ -1,11 +1,14 @@
 from datetime import timedelta
 from io import StringIO
+from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.db import IntegrityError
 from django.db.models import ProtectedError
-from django.test import TestCase
+from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import Encomenda, Morador, Visitante
@@ -120,3 +123,121 @@ class PopularDadosTesteCommandTest(TestCase):
         call_command("popular_dados_teste", "--limpar", stdout=StringIO())
         self.assertEqual(Morador.objects.count(), 8)
         self.assertEqual(Visitante.objects.count(), 5)
+
+
+# Senha usada só nos testes (banco de teste é descartado ao final).
+SENHA_TESTE = "Senha-de-teste-123"
+
+
+def criar_porteiro(**kwargs):
+    dados = {"username": "porteiro.teste", "email": "porteiro.teste@exemplo.com.br"}
+    dados.update(kwargs)
+    return get_user_model().objects.create_user(password=SENHA_TESTE, **dados)
+
+
+class AcessoTest(TestCase):
+    def test_anonimo_redirecionado_ao_login(self):
+        resp = self.client.get(reverse("dashboard"))
+        self.assertRedirects(resp, f"{reverse('login')}?next=/")
+
+    def test_logado_acessa_dashboard(self):
+        self.client.force_login(criar_porteiro())
+        resp = self.client.get(reverse("dashboard"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Painel da portaria")
+        self.assertContains(resp, "Sair")
+
+    def test_pagina_de_login_publica_com_labels_e_csrf(self):
+        resp = self.client.get(reverse("login"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'name="csrfmiddlewaretoken"')
+        self.assertContains(resp, '<label for="id_username" class="form-label">E-mail ou usuário</label>', html=True)
+        self.assertContains(resp, '<label for="id_password" class="form-label">Senha</label>', html=True)
+        self.assertContains(resp, 'id="id_username"')
+        self.assertContains(resp, 'id="id_password"')
+        self.assertContains(resp, "Entrar")
+
+    def test_login_com_usuario_redireciona_ao_dashboard(self):
+        criar_porteiro()
+        resp = self.client.post(
+            reverse("login"), {"username": "porteiro.teste", "password": SENHA_TESTE}
+        )
+        self.assertRedirects(resp, reverse("dashboard"))
+
+    def test_login_com_email_sem_diferenciar_maiusculas(self):
+        criar_porteiro()
+        resp = self.client.post(
+            reverse("login"),
+            {"username": "Porteiro.Teste@Exemplo.com.br", "password": SENHA_TESTE},
+        )
+        self.assertRedirects(resp, reverse("dashboard"))
+
+    def test_login_respeita_next(self):
+        criar_porteiro()
+        resp = self.client.post(
+            reverse("login") + "?next=/",
+            {"username": "porteiro.teste", "password": SENHA_TESTE, "next": "/"},
+        )
+        self.assertRedirects(resp, "/")
+
+    def test_senha_errada_mostra_erro(self):
+        criar_porteiro()
+        resp = self.client.post(
+            reverse("login"), {"username": "porteiro.teste", "password": "errada"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "E-mail/usuário ou senha incorretos.")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_logout_por_post_volta_ao_login(self):
+        self.client.force_login(criar_porteiro())
+        resp = self.client.post(reverse("logout"))
+        self.assertRedirects(resp, reverse("login"))
+        resp = self.client.get(reverse("dashboard"))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_post_sem_csrf_e_rejeitado(self):
+        criar_porteiro()
+        client = Client(enforce_csrf_checks=True)
+        resp = client.post(
+            reverse("login"), {"username": "porteiro.teste", "password": SENHA_TESTE}
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_logado_e_redirecionado_ao_abrir_login(self):
+        self.client.force_login(criar_porteiro())
+        resp = self.client.get(reverse("login"))
+        self.assertRedirects(resp, reverse("dashboard"))
+
+
+@mock.patch("core.management.commands.criar_porteiro_demo.config")
+class CriarPorteiroDemoCommandTest(TestCase):
+    def test_cria_porteiro_com_senha_do_ambiente(self, config):
+        config.return_value = SENHA_TESTE
+        call_command("criar_porteiro_demo", stdout=StringIO())
+        user = get_user_model().objects.get(username="porteiro.demo")
+        self.assertTrue(user.check_password(SENHA_TESTE))
+        self.assertTrue(user.email.endswith("@exemplo.com.br"))
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+
+    def test_rodar_de_novo_atualiza_senha(self, config):
+        config.return_value = SENHA_TESTE
+        call_command("criar_porteiro_demo", stdout=StringIO())
+        config.return_value = "Outra-senha-456"
+        call_command("criar_porteiro_demo", stdout=StringIO())
+        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertTrue(get_user_model().objects.get().check_password("Outra-senha-456"))
+
+    def test_senha_fraca_recusada(self, config):
+        config.return_value = "123"
+        with self.assertRaises(CommandError):
+            call_command("criar_porteiro_demo", stdout=StringIO())
+        self.assertFalse(get_user_model().objects.exists())
+
+    @mock.patch("sys.stdin")
+    def test_sem_senha_e_sem_terminal_falha(self, stdin, config):
+        config.return_value = ""
+        stdin.isatty.return_value = False
+        with self.assertRaises(CommandError):
+            call_command("criar_porteiro_demo", stdout=StringIO())

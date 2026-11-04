@@ -14,6 +14,7 @@ from pathlib import Path
 
 import dj_database_url
 from decouple import Csv, config
+from django.contrib.messages import constants as message_constants
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,6 +50,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Exige login em todas as views (exceto as marcadas com @login_not_required).
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -129,3 +132,14 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Autenticação
+# Permite entrar com usuário ou e-mail.
+AUTHENTICATION_BACKENDS = ["core.backends.EmailOuUsuarioBackend"]
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
+
+# Mapeia o nível "error" das mensagens para a classe "danger" do Bootstrap.
+MESSAGE_TAGS = {message_constants.ERROR: "danger"}
