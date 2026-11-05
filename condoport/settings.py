@@ -30,6 +30,13 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+
+# O Render define RENDER_EXTERNAL_HOSTNAME (ex.: condoport.onrender.com).
+RENDER_EXTERNAL_HOSTNAME = config("RENDER_EXTERNAL_HOSTNAME", default="")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 
 # Application definition
@@ -40,12 +47,16 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    # Faz o runserver usar o WhiteNoise também, igual à produção.
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "core",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serve os arquivos estáticos em produção (logo após o SecurityMiddleware).
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -82,7 +93,14 @@ WSGI_APPLICATION = "condoport.wsgi.application"
 # DATABASE_URL vazio ou ausente -> SQLite local (db.sqlite3).
 DATABASE_URL = config("DATABASE_URL", default="")
 if DATABASE_URL:
-    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=config("DATABASE_SSL_REQUIRE", default=False, cast=bool),
+        )
+    }
 else:
     DATABASES = {
         "default": {
@@ -127,6 +145,20 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # destino do collectstatic
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # Em produção: arquivos comprimidos e com hash no nome (cache longo).
+    # Em desenvolvimento: armazenamento padrão, sem precisar de collectstatic.
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -143,3 +175,34 @@ LOGOUT_REDIRECT_URL = "login"
 
 # Mapeia o nível "error" das mensagens para a classe "danger" do Bootstrap.
 MESSAGE_TAGS = {message_constants.ERROR: "danger"}
+
+
+# Segurança em produção
+# Ativada automaticamente quando DEBUG=False. Para simular produção localmente
+# em HTTP (sem certificado), use FORCAR_HTTPS=False.
+FORCAR_HTTPS = config("FORCAR_HTTPS", default=not DEBUG, cast=bool)
+if FORCAR_HTTPS:
+    # O Render termina o HTTPS no proxy e repassa o protocolo neste cabeçalho.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # HSTS: comece com valor baixo; aumente (ex.: 31536000) quando estiver estável.
+    SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=3600, cast=int)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+
+# Logs no console (aparecem no painel "Logs" do Render).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": config("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+    },
+}

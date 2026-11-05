@@ -1,0 +1,38 @@
+# Blueprint do Render: web service Django + PostgreSQL gerenciado.
+# Docs: https://render.com/docs/blueprint-spec
+# Segredos NÃO ficam aqui: SECRET_KEY é gerada pelo Render e
+# PORTEIRO_DEMO_PASSWORD é preenchida no painel (sync: false).
+
+databases:
+  - name: condoport-db
+    databaseName: condoport
+    user: condoport
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: condoport
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: ./build.sh
+    startCommand: python -m gunicorn condoport.wsgi:application
+    healthCheckPath: /login/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: DATABASE_URL
+        fromDatabase:
+          name: condoport-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: SEED_DADOS_DEMO
+        value: "True"
+      - key: PORTEIRO_DEMO_PASSWORD
+        sync: false
